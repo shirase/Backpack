@@ -85,6 +85,16 @@
 		margin-right: auto;
 	}
 
+	.container .log {
+		resize: none;
+		outline: none;
+		width: 100%;
+		padding: 10px;
+		border: none;
+		height: 100vh;
+		margin: -10px;
+	}
+
 	.container.\31 25\25 {
 		width: 100%;
 		max-width: 75em;

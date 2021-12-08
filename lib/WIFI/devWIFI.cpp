@@ -79,6 +79,10 @@ static bool force_update = false;
 static uint32_t totalSize;
 static UpdateWrapper updater = UpdateWrapper();
 
+static AsyncEventSource logging("/logging");
+static char logBuffer[256];
+static int logPos = 0;
+
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -132,9 +136,25 @@ static void WebUpdateSendJS(AsyncWebServerRequest *request)
   request->send(response);
 }
 
+static void WebUpdateSendLogJS(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t*)LOG_JS, sizeof(LOG_JS));
+  response->addHeader("Content-Encoding", "gzip");
+  request->send(response);
+}
+
+static void WebUpdateSendLogHTML(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)LOG_HTML, sizeof(LOG_HTML));
+  response->addHeader("Content-Encoding", "gzip");
+  request->send(response);
+}
 static void WebUpdateSendFlag(AsyncWebServerRequest *request)
 {
   AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG));
+  response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  response->addHeader("Pragma", "no-cache");
+  response->addHeader("Expires", "-1");
   response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
@@ -515,6 +535,10 @@ static void startServices()
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
 
+  server.on("/log.js", WebUpdateSendLogJS);
+  server.on("/log", WebUpdateSendLogHTML);
+  server.addHandler(&logging);
+
   server.onNotFound(WebUpdateHandleNotFound);
 
   server.begin();
@@ -590,6 +614,16 @@ static void HandleWebUpdate()
 
   if (servicesStarted)
   {
+    while (Serial.available()) {
+      int val = Serial.read();
+      logBuffer[logPos++] = val;
+      logBuffer[logPos] = 0;
+      if (val == '\n' || logPos == sizeof(logBuffer)-1) {
+        logging.send(logBuffer);
+        logPos = 0;
+      }
+    }
+
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
