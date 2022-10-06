@@ -11,6 +11,7 @@
 
 
 #include "msp.h"
+#include "crsf.h"
 #include "msptypes.h"
 #include "logging.h"
 #include "helpers.h"
@@ -122,6 +123,13 @@ void RebootIntoWifi()
   rebootTime = millis();
 }
 
+void ProcessCRSFPacketFromTX(crsfPacket_t *packet) 
+{
+  for (uint8_t i = 0; i < packet->payloadSize; i++) {
+    Serial.write(packet->payload[i]);
+  }
+}
+
 // espnow on-receive callback
 #if defined(PLATFORM_ESP8266)
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
@@ -135,6 +143,9 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
     DBG("%x", data[i]); // Debug prints
     DBG(",");
 
+    if (CRSF::crsfProcessReceivedByte(data[i])) {
+      ProcessCRSFPacketFromTX(CRSF::crsfGetReceivedPacket());
+    }
     if (msp.processReceivedByte(data[i]))
     {
       DBGLN(""); // Extra line for serial output readability
