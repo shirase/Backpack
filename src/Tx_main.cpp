@@ -3,6 +3,7 @@
 #include <ESP8266WiFi.h>
 
 #include "msp.h"
+#include "crsf.h"
 #include "msptypes.h"
 #include "logging.h"
 #include "config.h"
@@ -96,6 +97,13 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
     }
   }
   blinkLED();
+}
+
+void ProcessCRSFPacketFromTX(crsfPacket_t *packet) 
+{
+  if (packet->type <= CRSF_FRAMETYPE_DEVICE_INFO) {
+    esp_now_send(broadcastAddress, packet->payload, packet->payloadSize);
+  }
 }
 
 void ProcessMSPPacketFromTX(mspPacket_t *packet)
@@ -292,6 +300,9 @@ void loop()
   {
     uint8_t c = Serial.read();
 
+    if (CRSF::crsfProcessReceivedByte(c)) {
+      ProcessCRSFPacketFromTX(CRSF::crsfGetReceivedPacket());
+    }
     if (msp.processReceivedByte(c))
     {
       // Finished processing a complete packet
