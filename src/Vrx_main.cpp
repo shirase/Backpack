@@ -196,6 +196,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
     return;
   }
 
+#ifndef TARGET_VRX_NONE
   switch (packet->function)
   {
   case MSP_SET_VTX_CONFIG:
@@ -229,6 +230,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
     DBGLN("Unknown command from ESPNOW");
     break;
   }
+#endif
 }
 
 void SetupEspNow()
@@ -406,7 +408,9 @@ void setup()
     connectionState = running;
   }
 
+#ifndef TARGET_VRX_NONE
   vrxModule.Init();
+#endif
   #if defined(HDZERO_BACKPACK)
     Serial.begin(VRX_UART_BAUD);
   #endif
@@ -418,7 +422,9 @@ void loop()
   uint32_t now = millis();
 
   devicesUpdate(now);
+#ifndef TARGET_VRX_NONE
   vrxModule.Loop(now);
+#endif
 
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
@@ -437,12 +443,13 @@ void loop()
   {
     RebootIntoWifi();
   }
-
+#ifndef TARGET_VRX_NONE
   if (sendChangesToVrx)
   {
     sendChangesToVrx = false;
     vrxModule.SendIndexCmd(cachedIndex);
   }
+#endif
 
   // spam out a bunch of requests for the desired band/channel for the first 5s
   if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
